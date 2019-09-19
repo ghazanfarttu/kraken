@@ -74,13 +74,15 @@ fi
 echo "Using $KRAKEN"
 cp -v $KRAKEN $TMPDIR/base/bin/kraken
 
-# make uinit & dssh
+# make uinit & dssh & rfemulator
 (
     cd $TMPDIR/base/bin
     echo "Build dssh..."
     GOARCH=$ARCH CGO_ENABLED=0 go build $GOPATH/src/github.com/hpc/kraken/utils/layer0/dssh/dssh.go
     echo "Build uinit..."
     GOARCH=$ARCH CGO_ENABLED=0 go build $GOPATH/src/github.com/hpc/kraken/utils/layer0/uinit/uinit.go
+    echo "Build rfemulator..."
+    GOARCH=$ARCH CGO_ENABLED=0 go build $GOPATH/src/github.com/hpc/kraken/utils/layer0/rfemulator/RFEmulator-pull.go
 )
 
 # copy base_dir over tmpdir if it's set
