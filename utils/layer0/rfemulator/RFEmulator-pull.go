@@ -17,6 +17,12 @@ import (
 	//rpio "github.com/stianeikeland/go-rpio"
 )
 
+type CPUTempObj struct {
+	TimeStamp   time.Time
+	HostAddress string
+	CPUTemp     float64
+}
+
 type CPUPower struct {
 	Socket1_CPUPowerUsage float64 `json:"socket1_cpupowerusage"`
 	Socket2_CPUPowerUsage float64 `json:"socket2_cpupowerusage"`
@@ -49,6 +55,7 @@ func main() {
 
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Processors/power", GetProcessorPowerUsage).Methods(http.MethodGet)
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Memory/power", GetMemoryPowerUsage).Methods(http.MethodGet)
+	router.HandleFunc("/redfish/v1/Chassis/{ChassisID}/Thermal", GetCPUTemp).Methods(http.MethodGet)
 
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Actions/Reset", NodePowerControl).Methods(http.MethodPut)
 
@@ -135,6 +142,26 @@ func GetNodeIPAddress() string {
 		     }
 		     return hostname
 	*/
+}
+
+// CPU power usage
+func GetCPUTemp(w http.ResponseWriter, r *http.Request) {
+	hostIP := GetNodeIPAddress()
+	log.Println("\nCPU temperature\n")
+
+	// Its a mockup CPU temperature
+	cpuTempObj := new(CPUTempObj)
+	cpuTempObj.TimeStamp = time.Now()
+	cpuTempObj.HostAddress = hostIP
+	cpuTempObj.CPUTemp = 38.25
+
+	jsonObj, err := json.Marshal(cpuTempObj)
+
+	if err != nil {
+		log.Println(fmt.Sprintf("Could not marshal the response data: %v", err))
+	}
+	w.Write(jsonObj)
+
 }
 
 // CPU power usage
