@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -143,6 +145,10 @@ func GetNodeIPAddress() string {
 		     return hostname
 	*/
 }
+func randTemperature(min, max float64) float64 {
+	rand.Seed(time.Now().UnixNano())
+	return math.Floor((min+rand.Float64()*(max-min))*100) / 100
+}
 
 // CPU power usage
 func GetCPUTemp(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +159,7 @@ func GetCPUTemp(w http.ResponseWriter, r *http.Request) {
 	cpuTempObj := new(CPUTempObj)
 	cpuTempObj.TimeStamp = time.Now()
 	cpuTempObj.HostAddress = hostIP
-	cpuTempObj.CPUTemp = 38.25
+	cpuTempObj.CPUTemp = randTemperature(3.0, 98.0)
 
 	jsonObj, err := json.Marshal(cpuTempObj)
 
