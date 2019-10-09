@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 	"github.com/gorilla/mux"
 	//rpio "github.com/stianeikeland/go-rpio"
 )
+
+var count int
 
 type CPUTempObj struct {
 	TimeStamp   time.Time
@@ -51,17 +54,23 @@ type payLoad struct {
 	ResetType string
 }
 
-// main
-func main() {
-	router := mux.NewRouter()
+func ReadCPUTemp() float64 {
+	cmd := "cat /sys/class/thermal/thermal_zone0/temp"
+	//fmt.Println("command is ", cmd)
+	// splitting head => g++ parts => rest of the command
+	parts := strings.Fields(cmd)
+	head := parts[0]
+	parts = parts[1:len(parts)]
 
-	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Processors/power", GetProcessorPowerUsage).Methods(http.MethodGet)
-	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Memory/power", GetMemoryPowerUsage).Methods(http.MethodGet)
-	router.HandleFunc("/redfish/v1/Chassis/{ChassisID}/Thermal", GetCPUTemp).Methods(http.MethodGet)
+	out, err := exec.Command(head, parts...).Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	fmt.Printf("%s\n", out)
 
-	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Actions/Reset", NodePowerControl).Methods(http.MethodPut)
-
-	log.Fatal(http.ListenAndServe(":8002", router))
+	floatVal, err := strconv.ParseFloat(string(out), 64)
+	floatVal = floatVal / 1000
+	return math.Round(floatVal*1000) / 1000
 }
 
 func NodePowerControl(w http.ResponseWriter, r *http.Request) {
@@ -152,14 +161,20 @@ func randTemperature(min, max float64) float64 {
 
 // CPU power usage
 func GetCPUTemp(w http.ResponseWriter, r *http.Request) {
+	// count++
+	// println(count)
 	hostIP := GetNodeIPAddress()
-	log.Println("\nCPU temperature\n")
+	//fmt.Println(hostIP)
+	//log.Println("\nCPU temperature\n")
 
 	// Its a mockup CPU temperature
 	cpuTempObj := new(CPUTempObj)
 	cpuTempObj.TimeStamp = time.Now()
 	cpuTempObj.HostAddress = hostIP
-	cpuTempObj.CPUTemp = randTemperature(3.0, 98.0)
+
+	tempVal := ReadCPUTemp()
+	//tempVal := randTemperature(1, 100)
+	cpuTempObj.CPUTemp = tempVal
 
 	jsonObj, err := json.Marshal(cpuTempObj)
 
@@ -173,7 +188,7 @@ func GetCPUTemp(w http.ResponseWriter, r *http.Request) {
 // CPU power usage
 func GetProcessorPowerUsage(w http.ResponseWriter, r *http.Request) {
 	hostIP := GetNodeIPAddress()
-	log.Println("\nProcessor Power Usage")
+	//log.Println("\nProcessor Power Usage")
 
 	cpuPwrObj := new(CPUPowerObj)
 	cpuPwrObj.TimeStamp = time.Now()
@@ -213,4 +228,17 @@ func respondWithJSON(response http.ResponseWriter, statusCode int, data interfac
 	response.Header().Set("Content-Type", "application/json")
 	response.WriteHeader(statusCode)
 	response.Write(result)
+}
+
+// main
+func main() {
+	router := mux.NewRouter()
+
+	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Processors/power", GetProcessorPowerUsage).Methods(http.MethodGet)
+	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Memory/power", GetMemoryPowerUsage).Methods(http.MethodGet)
+	router.HandleFunc("/redfish/v1/Chassis/{ChassisID}/Thermal", GetCPUTemp).Methods(http.MethodGet)
+
+	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Actions/Reset", NodePowerControl).Methods(http.MethodPut)
+	ip := GetNodeIPAddress()
+	log.Fatal(http.ListenAndServe(ip+":8003", router))
 }
