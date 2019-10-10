@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
@@ -54,19 +55,28 @@ type payLoad struct {
 	ResetType string
 }
 
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
 func ReadCPUTemp() float64 {
-	cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
+	//cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
+	//cmd := "cat /Users/gali/go/src/temp"
 	//fmt.Println("command is ", cmd)
 	// splitting head => g++ parts => rest of the command
-	parts := strings.Fields(cmd)
-	head := parts[0]
-	parts = parts[1:len(parts)]
-
-	out, err := exec.Command(head, parts...).Output()
-	if err != nil {
-		fmt.Printf("%s", err)
-	}
-	fmt.Printf("%s\n", out)
+	// parts := strings.Fields(cmd)
+	// head := parts[0]
+	// parts = parts[1:len(parts)]
+	//os.Chdir("/Users/gali/go/src")
+	//out, err := exec.Command("cat", "temp").CombinedOutput()
+	// out, err := exec.Command(os.Getenv("SHELL"), "-c", "cat /Users/gali/go/src/test").CombinedOutput()
+	// if err != nil {
+	// 	os.Stderr.WriteString(err.Error())
+	// }
+	out, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
+	check(err)
+	fmt.Println(string(out))
 
 	floatVal, err := strconv.ParseFloat(string(out), 64)
 	floatVal = floatVal / 1000
