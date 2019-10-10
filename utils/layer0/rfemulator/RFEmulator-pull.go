@@ -74,8 +74,8 @@ func ReadCPUTemp() string {
 	// 	os.Stderr.WriteString(err.Error())
 	// }
 
-	temp, err := ioutil.ReadFile("/Users/gali/go/src/test")
-	//buff, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
+	//temp, err := ioutil.ReadFile("/Users/gali/go/src/test")
+	temp, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
 	check(err)
 	//fmt.Printf("\nbuff:%s", buff)
 	/*
