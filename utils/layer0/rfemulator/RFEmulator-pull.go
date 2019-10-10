@@ -55,7 +55,7 @@ type payLoad struct {
 }
 
 func ReadCPUTemp() float64 {
-	cmd := "cat /sys/class/thermal/thermal_zone0/temp"
+	cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
 	//fmt.Println("command is ", cmd)
 	// splitting head => g++ parts => rest of the command
 	parts := strings.Fields(cmd)
