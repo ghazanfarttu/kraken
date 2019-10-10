@@ -10,11 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	//"strconv"
 	"os/exec"
 
 	"github.com/gorilla/mux"
@@ -26,7 +24,7 @@ var count int
 type CPUTempObj struct {
 	TimeStamp   time.Time
 	HostAddress string
-	CPUTemp     float64
+	CPUTemp     string
 }
 
 type CPUPower struct {
@@ -57,10 +55,11 @@ type payLoad struct {
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		println(e)
+		//panic(e)
 	}
 }
-func ReadCPUTemp() float64 {
+func ReadCPUTemp() string {
 	//cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
 	//cmd := "cat /Users/gali/go/src/temp"
 	//fmt.Println("command is ", cmd)
@@ -74,13 +73,35 @@ func ReadCPUTemp() float64 {
 	// if err != nil {
 	// 	os.Stderr.WriteString(err.Error())
 	// }
-	out, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
-	check(err)
-	fmt.Println(string(out))
 
-	floatVal, err := strconv.ParseFloat(string(out), 64)
-	floatVal = floatVal / 1000
-	return math.Round(floatVal*1000) / 1000
+	temp, err := ioutil.ReadFile("/Users/gali/go/src/test")
+	//buff, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
+	check(err)
+	//fmt.Printf("\nbuff:%s", buff)
+	/*
+		f, err := os.Open("/Users/gali/go/src/test")
+		check(err)
+
+		buff := make([]byte, 8)
+
+		n1, err := f.Read(buff)
+		check(err)
+		f.Close()
+
+
+		fmt.Printf("\n%d bytes: %s\n", n1, string(buff))
+	*/
+	//n := bytes.IndexByte(buff, 0)
+	//fmt.Println(string(buff))
+	//floatVal, err := strconv.ParseFloat(string(buff), 64)
+	//check(err)
+	//fmt.Println(floatVal)
+	// floatVal = floatVal / 1000
+	// fmt.Printf("\n1st: %f", floatVal)
+	// floatVal = math.Round(floatVal*1000) / 1000
+	//fmt.Printf("\n2nd: %f", floatVal)
+	//return floatVal
+	return string(temp)
 }
 
 func NodePowerControl(w http.ResponseWriter, r *http.Request) {
