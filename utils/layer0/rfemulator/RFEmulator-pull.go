@@ -10,13 +10,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
-	"os/exec"
-
 	"github.com/gorilla/mux"
-	//rpio "github.com/stianeikeland/go-rpio"
 )
 
 var count int
@@ -59,6 +58,31 @@ func check(e error) {
 		//panic(e)
 	}
 }
+
+// Data structure for CPU Frequency Scaling
+
+// Payload for CPU performance scaling request
+type CPUPerfScalingReq struct {
+	ScalingGovernor  string   `json:"scalinggovernor"`
+	ScalingMinFreq   int      `json:"scalingminfreq"`
+	ScalingMaxFreq   int      `json:"scalingmaxfreq"`
+	NodesAddressList []string `json:"nodesaddresslist,omitempty"` //json:"nodesaddresslist"
+}
+
+// CPU performance scaling response structure
+type CPUPerfScalingResp struct {
+	TimeStamp          time.Time `json:"timestamp"`
+	HostAddress        string    `json:"hostaddress"`
+	CurScalingGovernor string    `json:"curscalinggovernor"`
+	ScalingMinFreq     int       `json:"scalingminfreq"`
+	ScalingMaxFreq     int       `json:"scalingmaxfreq"`
+	ScalingCurFreq     int       `json:"scalingcurfreq"`
+
+	CPUCurFreq int `json:"cpucurfreq"`
+	CPUMinFreq int `json:"cpuminfreq"`
+	CPUMaxFreq int `json:"cpumaxfreq"`
+}
+
 func ReadCPUTemp() string {
 	//cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
 	//cmd := "cat /Users/gali/go/src/temp"
@@ -261,6 +285,71 @@ func respondWithJSON(response http.ResponseWriter, statusCode int, data interfac
 	response.Write(result)
 }
 
+// Scale CPU Performance
+func ScaleCPUFreq(w http.ResponseWriter, r *http.Request) {
+
+	var reqPayload CPUPerfScalingReq
+
+	err := json.NewDecoder(r.Body).Decode(&reqPayload)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+	} else {
+
+		// Extracting the desired scaling governor, scaling minimum, scaling maximum frequencies
+		scalingGovernor := []byte(reqPayload.ScalingGovernor)
+		scalingMaxFreq := []byte(strconv.Itoa(reqPayload.ScalingMaxFreq))
+		scalingMinFreq := []byte(strconv.Itoa(reqPayload.ScalingMinFreq))
+
+		basePath := "/sys/devices/system/cpu/cpufreq/policy0/"
+		// basePath := "/Users/gali/go/src/cpufreq/"
+
+		// Set the CPU frequency scaling parameters
+		_ = ioutil.WriteFile(basePath+"scaling_governor", scalingGovernor, 0644)
+		_ = ioutil.WriteFile(basePath+"scaling_max_freq", scalingMaxFreq, 0644)
+		_ = ioutil.WriteFile(basePath+"scaling_min_freq", scalingMinFreq, 0644)
+
+		// Get the CPU frequency scaling parameters
+		scalingGovernor, _ = ioutil.ReadFile(basePath + "scaling_governor")
+		scalingMaxFreq, _ = ioutil.ReadFile(basePath + "scaling_max_freq")
+		scalingMinFreq, _ = ioutil.ReadFile(basePath + "scaling_min_freq")
+
+		cpuCurFreq, _ := ioutil.ReadFile(basePath + "cpuinfo_cur_freq")
+		cpuMinFreq, _ := ioutil.ReadFile(basePath + "cpuinfo_min_freq")
+		cpuMaxFreq, _ := ioutil.ReadFile(basePath + "cpuinfo_max_freq")
+		scalingCurFreq, _ := ioutil.ReadFile(basePath + "scaling_cur_freq")
+
+		scalingMinFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(scalingMinFreq), "\n"))
+		scalingMaxFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(scalingMaxFreq), "\n"))
+		scalingCurFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(scalingCurFreq), "\n"))
+		cpuCurFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(cpuCurFreq), "\n"))
+		cpuMinFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(cpuMinFreq), "\n"))
+		cpuMaxFreqqInt, e := strconv.Atoi(strings.TrimSuffix(string(cpuMaxFreq), "\n"))
+
+		hostIP := GetNodeIPAddress()
+
+		resPayload, e := json.Marshal(CPUPerfScalingResp{
+			TimeStamp:          time.Now(),
+			HostAddress:        hostIP,
+			CurScalingGovernor: string(scalingGovernor),
+			ScalingMinFreq:     scalingMinFreqqInt,
+			ScalingMaxFreq:     scalingMaxFreqqInt,
+			ScalingCurFreq:     scalingCurFreqqInt,
+
+			CPUCurFreq: cpuCurFreqqInt,
+			CPUMinFreq: cpuMinFreqqInt,
+			CPUMaxFreq: cpuMaxFreqqInt,
+		})
+		if e == nil {
+
+			w.Write(resPayload)
+		} else {
+			w.Write([]byte(e.Error()))
+		}
+
+	}
+
+}
+
 // main
 func main() {
 	router := mux.NewRouter()
@@ -268,8 +357,10 @@ func main() {
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Processors/power", GetProcessorPowerUsage).Methods(http.MethodGet)
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Memory/power", GetMemoryPowerUsage).Methods(http.MethodGet)
 	router.HandleFunc("/redfish/v1/Chassis/{ChassisID}/Thermal", GetCPUTemp).Methods(http.MethodGet)
+	router.HandleFunc("/redfish/v1/Chassis/{ChassisID}/ScaleCPUFreq", ScaleCPUFreq).Methods(http.MethodPut)
 
 	router.HandleFunc("/redfish/v1/Systems/{SystemID}/Actions/Reset", NodePowerControl).Methods(http.MethodPut)
 	ip := GetNodeIPAddress()
+	fmt.Println(ip)
 	log.Fatal(http.ListenAndServe(ip+":8003", router))
 }
