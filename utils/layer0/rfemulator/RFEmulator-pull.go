@@ -23,7 +23,7 @@ var count int
 type CPUTempObj struct {
 	TimeStamp   time.Time
 	HostAddress string
-	CPUTemp     string
+	CPUTemp     int
 }
 
 type CPUPower struct {
@@ -66,7 +66,8 @@ type CPUPerfScalingReq struct {
 	ScalingGovernor  string   `json:"scalinggovernor"`
 	ScalingMinFreq   int      `json:"scalingminfreq"`
 	ScalingMaxFreq   int      `json:"scalingmaxfreq"`
-	NodesAddressList []string `json:"nodesaddresslist,omitempty"` //json:"nodesaddresslist"
+	NodesAddressList []string `json:"nodesaddresslist,omitempty"`
+	Timeout          int      `json:"timeout,omitempty"`
 }
 
 // CPU performance scaling response structure
@@ -83,7 +84,7 @@ type CPUPerfScalingResp struct {
 	CPUMaxFreq int `json:"cpumaxfreq"`
 }
 
-func ReadCPUTemp() string {
+func ReadCPUTemp() int {
 	//cmd := "cat /sys/devices/virtual/thermal/thermal_zone0/temp"
 	//cmd := "cat /Users/gali/go/src/temp"
 	//fmt.Println("command is ", cmd)
@@ -98,10 +99,11 @@ func ReadCPUTemp() string {
 	// 	os.Stderr.WriteString(err.Error())
 	// }
 
-	//temp, err := ioutil.ReadFile("/Users/gali/go/src/test")
-	temp, err := ioutil.ReadFile("/sys/devices/virtual/thermal/thermal_zone0/temp")
+	tempSensorPath := "/sys/devices/virtual/thermal/thermal_zone0/temp"
+	cpuTemp, err := ioutil.ReadFile(tempSensorPath)
 	check(err)
-	//fmt.Printf("\nbuff:%s", buff)
+	cpuTempInt, e := strconv.Atoi(strings.TrimSuffix(string(cpuTemp), "\n"))
+
 	/*
 		f, err := os.Open("/Users/gali/go/src/test")
 		check(err)
@@ -125,7 +127,7 @@ func ReadCPUTemp() string {
 	// floatVal = math.Round(floatVal*1000) / 1000
 	//fmt.Printf("\n2nd: %f", floatVal)
 	//return floatVal
-	return string(temp)
+	return cpuTempInt
 }
 
 func NodePowerControl(w http.ResponseWriter, r *http.Request) {
