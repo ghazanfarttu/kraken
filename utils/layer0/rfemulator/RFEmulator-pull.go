@@ -103,7 +103,7 @@ func ReadCPUTemp() int {
 	cpuTemp, err := ioutil.ReadFile(tempSensorPath)
 	check(err)
 	cpuTempInt, e := strconv.Atoi(strings.TrimSuffix(string(cpuTemp), "\n"))
-
+	check(e)
 	/*
 		f, err := os.Open("/Users/gali/go/src/test")
 		check(err)
